@@ -1,0 +1,112 @@
+Feature: Insurance Claim Management
+
+User Story 1: Adding a new claim
+As an insurance agent
+I want to add a new claim to the system
+So that I can initiate the claim process for a customer
+
+Scenario: Successfully add a new claim
+  Given I am logged in as an insurance agent
+  When I navigate to the "Add New Claim" page
+  And I fill in the following claim details:
+    | Field           | Value                |
+    | Customer Name   | John Doe             |
+    | Policy Number   | POL-12345            |
+    | Incident Date   | 2023-05-15           |
+    | Claim Amount    | 5000.00              |
+    | Claim Type      | Auto                 |
+    | Description     | Fender bender        |
+  And I submit the claim
+  Then I should see a success message "Claim successfully added"
+  And the claim should be stored in the system with a unique claim ID
+
+Scenario: Attempt to add a claim with missing information
+  Given I am logged in as an insurance agent
+  When I navigate to the "Add New Claim" page
+  And I fill in the following claim details:
+    | Field           | Value                |
+    | Customer Name   | Jane Smith           |
+    | Policy Number   | POL-67890            |
+    | Incident Date   |                      |
+    | Claim Amount    | 3000.00              |
+    | Claim Type      | Home                 |
+    | Description     | Roof damage          |
+  And I submit the claim
+  Then I should see an error message "Incident Date is required"
+  And the claim should not be added to the system
+
+User Story 2: Retrieving a single claim
+As a claims adjuster
+I want to retrieve a specific claim by its ID
+So that I can review its details
+
+Scenario: Successfully retrieve an existing claim
+  Given I am logged in as a claims adjuster
+  When I search for a claim with ID "CLM-001"
+  Then I should see the claim details including:
+    | Field           | Value                |
+    | Claim ID        | CLM-001              |
+    | Customer Name   | John Doe             |
+    | Policy Number   | POL-12345            |
+    | Incident Date   | 2023-05-15           |
+    | Claim Amount    | 5000.00              |
+    | Claim Type      | Auto                 |
+    | Description     | Fender bender        |
+    | Status          | Pending              |
+
+Scenario: Attempt to retrieve a non-existent claim
+  Given I am logged in as a claims adjuster
+  When I search for a claim with ID "CLM-999"
+  Then I should see an error message "Claim not found"
+
+User Story 3: Retrieving a list of claims
+As a claims manager
+I want to retrieve a list of all claims in the system
+So that I can overview the current claim workload
+
+Scenario: Successfully retrieve a list of claims
+  Given I am logged in as a claims manager
+  When I navigate to the "All Claims" page
+  Then I should see a list of claims with the following information for each:
+    | Claim ID | Customer Name | Claim Type | Claim Amount | Status   |
+  And the list should be sorted by Claim ID in descending order
+  And I should see pagination controls if there are more than 20 claims
+
+Scenario: Filter claims by status
+  Given I am logged in as a claims manager
+  And I am on the "All Claims" page
+  When I select the status filter "Pending"
+  Then I should only see claims with the status "Pending" in the list
+
+User Story 4: Approving a claim
+As a claims adjuster
+I want to approve a claim
+So that the claim can be processed for payment
+
+Scenario: Successfully approve a claim with no unpaid invoices
+  Given I am logged in as a claims adjuster
+  And there is a claim with ID "CLM-002" in "Pending" status
+  And the claim has 0 unpaid invoices
+  When I navigate to the details page for claim "CLM-002"
+  And I click the "Approve Claim" button
+  Then I should see a success message "Claim CLM-002 has been approved"
+  And the claim status should be updated to "Approved"
+
+Scenario: Attempt to approve a claim with unpaid invoices
+  Given I am logged in as a claims adjuster
+  And there is a claim with ID "CLM-003" in "Pending" status
+  And the claim has 2 unpaid invoices
+  When I navigate to the details page for claim "CLM-003"
+  And I click the "Approve Claim" button
+  Then I should see an error message "Cannot approve claim with unpaid invoices"
+  And the claim status should remain "Pending"
+
+Scenario: Approve a claim after resolving unpaid invoices
+  Given I am logged in as a claims adjuster
+  And there is a claim with ID "CLM-004" in "Pending" status
+  And the claim initially has 2 unpaid invoices
+  When I mark all invoices for claim "CLM-004" as paid
+  And I navigate to the details page for claim "CLM-004"
+  And I click the "Approve Claim" button
+  Then I should see a success message "Claim CLM-004 has been approved"
+  And the claim status should be updated to "Approved"

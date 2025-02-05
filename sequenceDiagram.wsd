@@ -1,0 +1,93 @@
+@startuml
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+actor Client
+participant ClaimController
+participant ClaimService
+participant ClaimRepository
+database Database
+
+== Add Claim ==
+
+Client -> ClaimController : POST /api/claims
+activate ClaimController
+ClaimController -> ClaimService : addClaim(claim)
+activate ClaimService
+ClaimService -> ClaimService : claim.setStatus("Pending")
+ClaimService -> ClaimRepository : save(claim)
+activate ClaimRepository
+ClaimRepository -> Database : INSERT claim
+Database --> ClaimRepository : Claim saved
+ClaimRepository --> ClaimService : Saved Claim
+deactivate ClaimRepository
+ClaimService --> ClaimController : Saved Claim
+deactivate ClaimService
+ClaimController --> Client : 200 OK (Claim JSON)
+deactivate ClaimController
+
+== Get Claim by ID ==
+
+Client -> ClaimController : GET /api/claims/{id}
+activate ClaimController
+ClaimController -> ClaimService : getClaimById(id)
+activate ClaimService
+ClaimService -> ClaimRepository : findById(id)
+activate ClaimRepository
+ClaimRepository -> Database : SELECT claim
+Database --> ClaimRepository : Claim
+ClaimRepository --> ClaimService : Claim
+deactivate ClaimRepository
+ClaimService --> ClaimController : Claim
+deactivate ClaimService
+ClaimController --> Client : 200 OK (Claim JSON)
+deactivate ClaimController
+
+== Get All Claims ==
+
+Client -> ClaimController : GET /api/claims
+activate ClaimController
+ClaimController -> ClaimService : getAllClaims()
+activate ClaimService
+ClaimService -> ClaimRepository : findAll()
+activate ClaimRepository
+ClaimRepository -> Database : SELECT all claims
+Database --> ClaimRepository : List of Claims
+ClaimRepository --> ClaimService : List of Claims
+deactivate ClaimRepository
+ClaimService --> ClaimController : List of Claims
+deactivate ClaimService
+ClaimController --> Client : 200 OK (List of Claims JSON)
+deactivate ClaimController
+
+== Approve Claim ==
+
+Client -> ClaimController : PUT /api/claims/{id}/approve
+activate ClaimController
+ClaimController -> ClaimService : approveClaim(id)
+activate ClaimService
+ClaimService -> ClaimRepository : findById(id)
+activate ClaimRepository
+ClaimRepository -> Database : SELECT claim
+Database --> ClaimRepository : Claim
+ClaimRepository --> ClaimService : Claim
+deactivate ClaimRepository
+ClaimService -> ClaimService : getUnpaidInvoices(id)
+alt unpaidInvoices <= 1
+    ClaimService -> ClaimService : claim.setStatus("Approved")
+    ClaimService -> ClaimRepository : save(claim)
+    activate ClaimRepository
+    ClaimRepository -> Database : UPDATE claim
+    Database --> ClaimRepository : Claim updated
+    ClaimRepository --> ClaimService : Updated Claim
+    deactivate ClaimRepository
+    ClaimService --> ClaimController : "Claim approved successfully"
+else unpaidInvoices > 1
+    ClaimService --> ClaimController : "Cannot approve claim. More than one unpaid invoice."
+end
+deactivate ClaimService
+ClaimController --> Client : 200 OK (Status message)
+deactivate ClaimController
+
+@enduml
